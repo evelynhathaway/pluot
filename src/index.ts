@@ -1,72 +1,35 @@
-interface OauthClient {
-	id: string,
-	secret: string,
-}
-interface OauthUser {
-	username: string,
-	password: string,
-	scope?: string,
-}
-// Extend icalgen TODO
-interface Calendar {
-	tag?: string,
-	url?: string,
-	name?: string,
-	description?: string,
-	options?: Options,
-}
-interface Options {
-	appendLinkToCalendarDescription?: boolean,
-	appendLinkToEventDescription?: boolean,
-	maxFileSize?: number,
-	maxPastEvents?: number | false,
-	maxPastEventsDayDelta?: number | false,
-	maxUpcomingEvents?: number | false,
-	maxUpcomingEventsDayDelta?: number | false,
-	truncateEventDescription?: boolean,
-}
-
-
-const defaultOptions: Options = {
-	appendLinkToCalendarDescription: true,
-	appendLinkToEventDescription: true,
-	maxFileSize: 1000000,
-	maxPastEvents: false,
-	maxPastEventsDayDelta: 31,
-	maxUpcomingEvents: false,
-	maxUpcomingEventsDayDelta: 365,
-	truncateEventDescription: false,
-}
-
-
 import request from "request-promise-native";
-import oauth2 from "simple-oauth2";
-import ical from "ical-generator";
+import icalGen from "ical-generator";
+import * as oauth2 from "simple-oauth2";
 
-const getToken = async function (client: OauthClient, user: OauthUser) {
+
+const getToken = async function (
+	client: oauth2.ModuleOptions.client,
+	user: oauth2.PasswordTokenConfig
+): Promise<oauth2.AccessToken> {
 	try {
-		const authInstance = oauth2.create({
+		const authInstance: oauth2.OAuthClient = oauth2.create({
 			client,
 			auth: {
 				tokenHost: "https://oauth.wildapricot.org",
 				tokenPath: "/auth/token",
 			},
 		});
-		const result = await authInstance.ownerPassword.getToken({
+		const token: oauth2.Token = await authInstance.ownerPassword.getToken({
 			scope: [
 				"contacts_me",
 				"events_view",
 			],
 			...user,
 		});
-		return authInstance.accessToken.create(result);
+		return authInstance.accessToken.create(token);
 	} catch (error) {
 		// TODO
 		throw new Error("Access Token Error");
 	}
 };
 
-const refreshToken = async function (accessToken: oauth2.AccessToken) {
+const refreshToken = async function (accessToken: oauth2.AccessToken): Promise<oauth2.AccessToken> {
 	if (accessToken.expired()) {
 		try {
 			accessToken = await accessToken.refresh();
@@ -75,18 +38,33 @@ const refreshToken = async function (accessToken: oauth2.AccessToken) {
 			throw new Error("Error refreshing access token");
 		}
 	}
-	return accessToken;
+	return accessToken; // remove if it mutates TODO
 };
 
 
 // TODO: WIP
-const generateCalendar = async function (calendar: Calendar, options: Options) {
-	const cal = ical({
-		"name": calendar.name || tag.name,
+const generateCalendar = async function (
+	calendar: Calendar,
+	options: Options = {
+		appendLinkToCalendarDescription: true,
+		appendLinkToEventDescription: true,
+		maxFileSize: 1000000,
+		maxPastEvents: false,
+		maxPastEventsDayDelta: 31,
+		maxUpcomingEvents: false,
+		maxUpcomingEventsDayDelta: 365,
+		truncateEventDescription: false,
+	},
+	userId: number,
+	get: Function
+): Promise<icalGen.ICalCalendar> {
+	const cal = icalGen({
+		"name": calendar.name || calendar.tag,
 		"method": "PUBLISH"
 	});
 
-	const eventIds: Array<number> = (await get(`/accounts/${userId}/events/?idsOnly=true&filter=StartDate gt 2015-01-15 AND StartDate lt 2015-06-15`))["EventIdentifiers"];
+	const eventIds: Array<number> = (await get(`/accounts/${userId}/events/?idsOnly=true`))["EventIdentifiers"];
+	// TODO date filters, tag filters `&filter=StartDate gt 2015-01-15 AND StartDate lt 2015-06-15`
 	for (let eventId of eventIds) {
 		const event = await get(`/accounts/${userId}/events/${eventId}`);
 
@@ -94,31 +72,33 @@ const generateCalendar = async function (calendar: Calendar, options: Options) {
 			start: new Date(event["StartDate"]),
 			end: new Date(event["EndDate"]),
 			summary: event["Name"] || "Event",
-			organizer: "TODO",
+			// organizer: "TODO",
 			allDay: event["StartTimeSpecified"] && event["EndTimeSpecified"],
 		});
 	}
 
-	console.log(cal.toString());
-	return cal.toString();
+	console.log(cal.toString()); // TODO: remove
+	return cal;
 };
 
 
 export default async function(
 	calendar: Calendar | Array<Calendar>,
-	client: OauthClient,
-	user: OauthUser,
+	client: oauth2.ModuleOptions.client,
+	user: oauth2.PasswordTokenConfig,
 	options?: Options,
 	// stream?: TODO
-) {
+): Promise<icalGen.ICalCalendar | Array<icalGen.ICalCalendar>> {
 	// Authenticate with WA
 	let accessToken: oauth2.AccessToken = await getToken(client, user);
+
 	// ID of authenticated user to view events as
 	const userId: number = accessToken["token"]["Permissions"][0]["AccountId"];
+
 	// Helper function around request
 	const get = async (endpoint: string) => {
 		// Refresh expired tokens
-		accessToken = await refreshToken(accessToken);
+		accessToken = await refreshToken(accessToken); // TODO does refresh mutate the existing token object? If so, remove assign
 
 		// Return authenticated get request to the API
 		return (
@@ -143,33 +123,30 @@ export default async function(
 		);
 	};
 
-	// TODO
+	// Helper function to call `generateCalendar`
+	const callGen = function (cal: Calendar) {
+		return generateCalendar(
+			cal,
+			{
+				...options,
+				...cal.options,
+			},
+			userId,
+			get
+		)
+	}
+
+	// Call `generateCalendar`, return result(s)
 	if (Array.isArray(calendar)) {
 		// Break into parrell
-		const results = [];
-		for (const cal of calendar) {
-			results.push(generateCalendar(
-				cal,
-				{
-					...defaultOptions,
-					...options,
-					...cal.options,
-				}
-			));
+		try {
+			const promises: Array<Promise<icalGen.ICalCalendar>> = calendar.map(callGen);
+		} catch (error) {
+			console.log("boops");
 		}
 		// Await all
-		for (const result of results) {
-			await result;
-		}
-		return results;
+		return await Promise.all(promises);
 	} else {
-		return await generateCalendar(
-			calendar,
-			{
-				...defaultOptions,
-				...options,
-				...calendar.options,
-			}
-		);
+		return callGen(calendar);
 	}
 }
