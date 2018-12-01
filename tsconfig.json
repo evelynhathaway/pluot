@@ -6,7 +6,6 @@
 		"strict": true,
 		"moduleResolution": "node",
 		"esModuleInterop": true,
-		"allowSyntheticDefaultImports": true,
 		"types": [
 			"node",
 			"request-promise-native",
