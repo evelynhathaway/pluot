@@ -1,10 +1,10 @@
 import request from "request-promise-native";
 import icalGen from "ical-generator";
 import * as oauth2 from "simple-oauth2";
-
+import {CalendarType, OptionsType} from "./types";
 
 const getToken = async function (
-	client: oauth2.ModuleOptions.client,
+	client: oauth2.ModuleOptions["client"],
 	user: oauth2.PasswordTokenConfig
 ): Promise<oauth2.AccessToken> {
 	try {
@@ -44,8 +44,8 @@ const refreshToken = async function (accessToken: oauth2.AccessToken): Promise<o
 
 // TODO: WIP
 const generateCalendar = async function (
-	calendar: Calendar,
-	options: Options = {
+	calendar: CalendarType,
+	options: OptionsType = {
 		appendLinkToCalendarDescription: true,
 		appendLinkToEventDescription: true,
 		maxFileSize: 1000000,
@@ -81,12 +81,11 @@ const generateCalendar = async function (
 	return cal;
 };
 
-
-export default async function(
-	calendar: Calendar | Array<Calendar>,
-	client: oauth2.ModuleOptions.client,
+export default async function (
+	calendar: CalendarType | Array<CalendarType>,
+	client: oauth2.ModuleOptions["client"],
 	user: oauth2.PasswordTokenConfig,
-	options?: Options,
+	options?: OptionsType,
 	// stream?: TODO
 ): Promise<icalGen.ICalCalendar | Array<icalGen.ICalCalendar>> {
 	// Authenticate with WA
@@ -124,7 +123,7 @@ export default async function(
 	};
 
 	// Helper function to call `generateCalendar`
-	const callGen = function (cal: Calendar) {
+	const callGen = function (cal: CalendarType) {
 		return generateCalendar(
 			cal,
 			{
@@ -134,16 +133,13 @@ export default async function(
 			userId,
 			get
 		)
-	}
+	};
 
 	// Call `generateCalendar`, return result(s)
 	if (Array.isArray(calendar)) {
-		// Break into parrell
-		try {
-			const promises: Array<Promise<icalGen.ICalCalendar>> = calendar.map(callGen);
-		} catch (error) {
-			console.log("boops");
-		}
+		// Break into parallel
+		const promises: Array<Promise<icalGen.ICalCalendar>> = calendar.map(callGen);
+
 		// Await all
 		return await Promise.all(promises);
 	} else {
