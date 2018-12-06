@@ -16,7 +16,6 @@ export default async function (
 		maxUpcomingEventsDayDelta: 365,
 		truncateEventDescription: false,
 	},
-	userId: number,
 	get: GetType
 ): Promise<icalGen.ICalCalendar> {
 	const cal = icalGen({
@@ -25,19 +24,22 @@ export default async function (
 	});
 
 	const filter: string = generateFilter({tag: calendar.tag});
-	const eventIds: EventIdsType = await get.eventIds(userId, filter);
+	const eventIds: EventIdsType = await get.eventIds(filter);
 
-	log(`Fetching ${eventIds.length} events.`);
+	log(`Fetching ${eventIds.length} events for ${calendar.name}`);
 	for (let eventId of eventIds) {
-		const event: EventType = await get.event(userId, eventId);
+		const event: EventType = await get.event(eventId);
 
 		log(`Adding event "${event["Name"]}" to "${calendar.name}".`);
 		cal.createEvent({
-			start: new Date(event["StartDate"]),
-			end: new Date(event["EndDate"]),
-			summary: event["Name"] || "Event",
-			// organizer: "TODO",
-			allDay: event["StartTimeSpecified"] && event["EndTimeSpecified"],
+			uid: event.Id, // TODO add domain to calendar, match docs to typings
+			start: new Date(event.StartDate),
+			end: new Date(event.EndDate),
+			summary: event.Name || "Untitled Event",
+			organizer: event.Details.Organizer || undefined,
+			allDay: event.StartTimeSpecified && event.EndTimeSpecified,
+			description: event.Details.DescriptionHtml, // TODO, unescape?, sanatize (with options?), remove new lines between tags?,
+			location: event.Location,
 		});
 	}
 

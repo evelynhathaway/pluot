@@ -1,4 +1,5 @@
 import {CalendarData} from "ical-generator";
+import {AccessToken} from "simple-oauth2";
 
 export interface CalendarType extends CalendarData {
 	tag?: string | Array<string>,
@@ -19,20 +20,17 @@ export interface OptionsType {
 export type EventIdsType = Array<number>
 
 export interface GetType {
-	(endpoint: string): Promise<object>,
+	(endpoint: string, memoize?: boolean): Promise<object>,
 	memo: {
-		eventIds: {
-			[key: string]: EventIdsType,
-		},
-		event: {
-			[key: string]: EventType,
-		},
+		[key: string]: object,
 	},
+	accessToken: AccessToken,
+	accountId: number,
 	eventIds: {
-		(userId: number, filter: string): Promise<EventIdsType>,
+		(filter: string, memoize?: boolean): Promise<EventIdsType>,
 	},
 	event: {
-		(userId: number, eventId: number): Promise<EventType>,
+		(eventId: number, memoize?: boolean): Promise<EventType>,
 	},
 }
 
