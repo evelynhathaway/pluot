@@ -6,11 +6,11 @@ import {GetType, EventType, EventIdsType} from "./types";
 
 
 // Helper function around `request()`
-const get = async function (
-	this: GetType,
+const get = async function<T = object> (
+	this: GetType<T>,
 	endpoint: string,
 	memoize: boolean = false
-): Promise<object> {
+): Promise<T> {
 	// Memoize early return and log
 	if (memoize && this.memo[endpoint]) {
 		log(`Found call ${endpoint} in cache.`);
@@ -46,28 +46,28 @@ const get = async function (
 };
 
 // Helper functions wrapping around (memoized by default)
-get.eventIds = async function (
-	this: GetType,
+get.eventIds = async function<T = object> (
+	this: GetType<T>,
 	filter: string,
 	memoize: boolean = true
 ): Promise<EventIdsType> {
-	return (
+	return (<any>
 		await this(`/accounts/${this.accountId}/events/?idsOnly=true${filter ? `&$filter=${filter}` : ""}`, memoize)
 	)["EventIdentifiers"];
 };
-get.event = async function (
-	this: GetType,
+get.event = async function<T = object> (
+	this: GetType<T>,
 	eventId: number,
 	memoize: boolean = true
 ): Promise<EventType> {
-	return this(`/accounts/${this.accountId}/events/${eventId}`, memoize);
+	return <any>this(`/accounts/${this.accountId}/events/${eventId}`, memoize);
 };
 
 
-export default async function (
+export default async function<T = object> (
 	client: oauth2.ModuleOptions["client"],
 	user: oauth2.PasswordTokenConfig
-): Promise<GetType> {
+): Promise<GetType<T>> {
 	return new Proxy(
 		Object.assign(
 			() => {},

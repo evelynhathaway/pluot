@@ -19,10 +19,10 @@ export interface OptionsType {
 
 export type EventIdsType = Array<number>
 
-export interface GetType {
-	(endpoint: string, memoize?: boolean): Promise<object>,
+export interface GetType<T = object> {
+	(endpoint: string, memoize?: boolean): Promise<T>,
 	memo: {
-		[key: string]: object,
+		[key: string]: T,
 	},
 	accessToken: AccessToken,
 	accountId: number,
