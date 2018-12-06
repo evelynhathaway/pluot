@@ -10,7 +10,7 @@ export default async function (
 ): Promise<icalGen.ICalCalendar> {
 	const ical = icalGen(calendar);
 
-	const filter: string = generateFilter({tag: calendar.tag});
+	const filter: string = generateFilter(calendar);
 	const eventIds: EventIdsType = await get.eventIds(filter);
 
 	log(`Fetching ${eventIds.length} events for ${calendar.name}`);
