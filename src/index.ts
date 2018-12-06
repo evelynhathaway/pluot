@@ -3,6 +3,7 @@ import * as oauth2 from "simple-oauth2";
 import {emitter, log} from "./log";
 import generateCalendar from "./calendar";
 import makeGet from "./get";
+import {defaultCalendar, defaultOptions} from "./defaults";
 import {CalendarType, OptionsType, GetType} from "./types";
 
 
@@ -20,14 +21,8 @@ export default async function (
 
 	// Helper function to call `generateCalendar`
 	const callGen = function (cal: CalendarType) {
-		return generateCalendar(
-			cal,
-			{
-				...options,
-				...cal.options,
-			},
-			get
-		)
+		cal.options = {...defaultOptions, ...options, ...cal.options};
+		return generateCalendar({...defaultCalendar, ...cal}, get);
 	};
 
 	// Call `generateCalendar`, return result(s)

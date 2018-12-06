@@ -1,27 +1,14 @@
 import icalGen from "ical-generator";
 import {log} from "./log";
 import generateFilter from "./filter";
-import {CalendarType, OptionsType, GetType, EventType, EventIdsType} from "./types";
+import {CalendarType, GetType, EventType, EventIdsType} from "./types";
 
 
 export default async function (
 	calendar: CalendarType,
-	options: OptionsType = {
-		appendLinkToCalendarDescription: true,
-		appendLinkToEventDescription: true,
-		maxFileSize: 1000000,
-		maxPastEvents: false,
-		maxPastEventsDayDelta: 31,
-		maxUpcomingEvents: false,
-		maxUpcomingEventsDayDelta: 365,
-		truncateEventDescription: false,
-	},
 	get: GetType
 ): Promise<icalGen.ICalCalendar> {
-	const cal = icalGen({
-		"name": calendar.name,
-		"method": "PUBLISH"
-	});
+	const ical = icalGen(calendar);
 
 	const filter: string = generateFilter({tag: calendar.tag});
 	const eventIds: EventIdsType = await get.eventIds(filter);
@@ -31,7 +18,7 @@ export default async function (
 		const event: EventType = await get.event(eventId);
 
 		log(`Adding event "${event["Name"]}" to "${calendar.name}".`);
-		cal.createEvent({
+		ical.createEvent({
 			uid: event.Id, // TODO add domain to calendar, match docs to typings
 			start: new Date(event.StartDate),
 			end: new Date(event.EndDate),
@@ -43,5 +30,5 @@ export default async function (
 		});
 	}
 
-	return cal;
+	return ical;
 };
