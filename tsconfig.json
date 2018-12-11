@@ -1,20 +1,13 @@
 {
 	"compilerOptions": {
 		"module": "commonjs",
-		"target": "ES2018",
-		"lib": ["ES2018"],
+		"target": "es2018",
+		"lib": ["es2018"],
 		"strict": true,
 		"moduleResolution": "node",
 		"esModuleInterop": true,
-		"types": [
-			"node",
-			"request-promise-native",
-			"simple-oauth2"
-		]
+		"outDir": "./lib/"
 	},
-	"include": [
-		"src/**/*.ts"
-	],
 	"exclude": [
 		"node_modules"
 	]

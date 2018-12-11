@@ -5,3 +5,4 @@ lib/
 debug.js
 
 .idea/
+.vscode/
