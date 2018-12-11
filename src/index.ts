@@ -1,28 +1,30 @@
-import icalGen from "ical-generator";
-import * as oauth2 from "simple-oauth2";
+import deepmerge from "deepmerge";
 import {emitter, log} from "./log";
 import generateCalendar from "./calendar";
 import makeGet from "./get";
-import {defaultCalendar, defaultOptions} from "./defaults";
-import {CalendarType, OptionsType, GetType} from "./types";
+import {defaultCalendar} from "./defaults";
+import {DeepPartial, CalendarType, OptionsType, GetType, ClientType, UserType, ICalResponseType} from "./types";
 
 
 export {emitter as log};
 
 
 export default async function (
-	calendar: CalendarType | Array<CalendarType>,
-	client: oauth2.ModuleOptions["client"],
-	user: oauth2.PasswordTokenConfig,
-	options?: OptionsType,
-): Promise<icalGen.ICalCalendar | Array<icalGen.ICalCalendar>> {
+	calendar: DeepPartial<CalendarType> | Array<DeepPartial<CalendarType>>,
+	client: ClientType,
+	user: UserType,
+	options: DeepPartial<OptionsType> = {},
+): Promise<ICalResponseType | Array<ICalResponseType>> {
 	// Create get function for authenticated requests to the WA API
 	const get: GetType = await makeGet(client, user);
 
+	const mergedCalendar: CalendarType = deepmerge.all([{}, defaultCalendar, {options}]) as CalendarType;
 	// Helper function to call `generateCalendar`
-	const callGen = function (cal: CalendarType) {
-		cal.options = {...defaultOptions, ...options, ...cal.options};
-		return generateCalendar({...defaultCalendar, ...cal}, get);
+	const callGen = function (cal: DeepPartial<CalendarType>) {
+		return generateCalendar(
+			deepmerge(mergedCalendar, cal),
+			get,
+		);
 	};
 
 	// Call `generateCalendar`, return result(s)
@@ -37,4 +39,4 @@ export default async function (
 
 	log("Finished.");
 	return result;
-}
+};

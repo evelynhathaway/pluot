@@ -1,34 +1,56 @@
-import {CalendarType} from "./types";
+import {Partial, FilterType, HasToStringType} from "./types";
 
 
 // Convert native date objects to YYYY-MM-DD
 const toISODate = (date: Date): string => date.toISOString().replace(/T.*$/i, "");
 
-
-export default function (calendar: CalendarType) {
-	// TODO: ID, Name, RegistrationEnabled, TextIndex, manual date range
-	// TODO: use `$sort`, `$top`, and `$filter=IsUpcoming eq true` for max events?
-	const {tag} = calendar;
-	const {maxPastEventsDayDelta, maxUpcomingEventsDayDelta} = calendar.options;
-	const filter: Array<string> = [];
-
-	// Filter by tag(s)
-	if (tag) {
-		// TODO: document if it's `any in` or `all in`
-		filter.push(`Tags in [${Array.isArray(tag) ? tag.join(",") : tag}]`);
+// Helpers
+export const eqHelper = function (key: string, value: string | HasToStringType): string {
+	return `${key} eq ${value}`;
+};
+export const inHelper = function (key: string, value: string | HasToStringType | Array<string | HasToStringType>): string {
+	return `${key} in [${Array.isArray(value) ? value.join(",") : value}]`;
+};
+export const dateHelper = function (date: Date | string, upcoming: boolean): string {
+	if (date instanceof Date) {
+		date = toISODate(date);
 	}
-	// Filter by days past the end date
-	if (typeof maxPastEventsDayDelta === "number") {
-		const pastDate: Date = new Date(new Date().getTime() - 1000 * 60 * 60 * 24 * maxPastEventsDayDelta);
-		filter.push(`EndDate ge ${toISODate(pastDate)}`);
+
+	if (upcoming) {
+		return `StartDate le ${date}`;
+	} else {
+		return `EndDate ge ${date}`;
 	}
-	// Filter by days before the start date
-	if (typeof maxUpcomingEventsDayDelta === "number") {
-		const upcomingDate: Date = new Date();
-		upcomingDate.setDate(upcomingDate.getDate() + maxUpcomingEventsDayDelta);
-		filter.push(`StartDate le ${toISODate(upcomingDate)}`);
+};
+
+export default function (filter: Partial<FilterType>): string {
+	const result: Array<string> = [];
+	// `in` helper filters
+	if (filter.tag) {
+		result.push(inHelper("Tags", filter.tag));
+	}
+	if (filter.id) {
+		result.push(inHelper("ID", filter.id));
+	}
+	// `eq` helper filters
+	if (filter.upcoming) {
+		result.push(inHelper("IsUpcoming", filter.upcoming));
+	}
+	if (filter.registrable) {
+		result.push(inHelper("RegistrationEnabled", filter.registrable));
+	}
+	// Date helper filters
+	if (filter.before) {
+		result.push(dateHelper(filter.before, true));
+	}
+	if (filter.after) {
+		result.push(dateHelper(filter.after, false));
+	}
+	// Manual filter
+	if (filter.manual) {
+		result.push(`(${filter.manual})`); // Isolated by parentheses
 	}
 
 	// Return as string with `AND` logical operator
-	return filter.join(" AND ");
-}
+	return result.join(" AND ");
+};

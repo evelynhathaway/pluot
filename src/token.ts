@@ -25,8 +25,7 @@ export const getToken = async function (
 		});
 		return authInstance.accessToken.create(token);
 	} catch (error) {
-		// TODO
-		throw new Error("Access Token Error");
+		throw new Error("There was an error while creating an access token.");
 	}
 };
 
@@ -39,8 +38,7 @@ export const refreshToken = async function (
 			log("Token has expired, refreshing token.");
 			return accessToken = await accessToken.refresh();
 		} catch (error) {
-			// TODO
-			throw new Error("Error refreshing access token");
+			throw new Error("There was an error while refreshing the access token.");
 		}
 	}
 	return accessToken;

@@ -1,58 +1,143 @@
-import * as oauth2 from "simple-oauth2";
 import request from "request-promise-native";
 import {getToken, refreshToken} from "./token";
+import generateFilter from "./filter";
 import {log} from "./log";
-import {GetType, EventType, EventIdsType} from "./types";
+import {GetType, ParamsType, QueueItem, CalendarType, EventType, EventIdsType, ClientType, UserType} from "./types";
 
 
-// Helper function around `request()`
-const get = async function<T = object> (
-	this: GetType<T>,
+// Add URL parameters to endpoint
+const makeFullUrl = function (
 	endpoint: string,
-	memoize: boolean = false
-): Promise<T> {
-	// Memoize early return and log
-	if (memoize && this.memo[endpoint]) {
-		log(`Found call ${endpoint} in cache.`);
-		return this.memo[endpoint];
-	} else {
-		log(`Requesting ${endpoint} from API.`);
+	params?: ParamsType
+): string {
+	let hasParams = false;
+	if (params) {
+		for (const key in params) {
+			endpoint += hasParams ? "&" : (hasParams = true) && "?";
+			endpoint += `${encodeURIComponent(key)}=${encodeURIComponent(params[key].toString())}`;
+		}
 	}
 
-	// Refresh expired tokens
+	return endpoint;
+};
+
+// Request queue runner
+const queueRunner = async function<T = object> (
+	this: GetType<T>
+): Promise<void> {
+	if (this.queue.length === 0) {
+		// Nothing is in queue, allow event loop to exit, early return
+		this.queueRunnerInt.unref();
+		return;
+	}
+
+	const {fullUrl, memoize, resolve, reject} = this.queue.shift() as QueueItem;
+
+	// Refresh expired tokens (if needed)
 	this.accessToken = await refreshToken(this.accessToken);
 
-	// Return authenticated get request to the API
-	const result = await request.get(
-			`https://api.wildapricot.org/publicview/v1${endpoint}`,
-			{"auth": {"bearer": this.accessToken.token["access_token"]}}
-		)
-		.then(JSON.parse)
-		.catch(error => {
-			// TODO
-			if (error.name === "StatusCodeError") {
-				throw new Error(`Failed to fetch from API: ${error.statusCode} ${error.response.statusMessage}`);
-			} else {
-				throw new Error("Unknown error while fetching from the API.");
+	log.verbose(`Requesting ${fullUrl} from API.`);
+
+	// Get authenticated get request to the API
+	let result;
+	try {
+		result = JSON.parse(
+			await request.get(
+				`https://api.wildapricot.org/publicview/v1${fullUrl}`,
+				{"auth": {"bearer": this.accessToken.token["access_token"]}},
+			)
+		);
+	} catch (error) {
+		let errorMsg: string = "Failed to fetch from API: ";
+
+		if (error.name === "StatusCodeError") {
+			switch (error.statusCode) {
+				case 401: {
+					errorMsg += `Access denied to ${fullUrl}`;
+					break;
+				}
+				case 404: {
+					errorMsg += `No resource at ${fullUrl}`;
+					break;
+				}
+				case 428: {
+					errorMsg += `User ${this.accountId} should accept Wild Apricot's API terms of use.`;
+					break;
+				}
+				case 429: {
+					errorMsg += "The API is rate limiting.";
+					break;
+				}
+				default: {
+					errorMsg += `${error.statusCode} ${error.response.statusMessage}`;
+				}
 			}
-		});
+		} else {
+			errorMsg += `Unknown error while fetching from the API.\n${error}`;
+		}
+
+		reject(new Error(errorMsg));
+	}
 
 	// Memoize set
 	if (memoize) {
-		this.memo[endpoint] = result;
+		this.memo[fullUrl] = result;
 	}
 
-	return result;
+	// Resolve with parsed result
+	resolve(result);
+};
+
+// Helper function around `request()`
+const get = function<T = object> (
+	this: GetType<T>,
+	endpoint: string,
+	params?: ParamsType,
+	memoize: boolean = false
+): Promise<T> {
+	const fullUrl: string = makeFullUrl(endpoint, params);
+
+	// Memoize early return
+	if (memoize && this.memo[fullUrl]) {
+		log.verbose(`Found call ${fullUrl} in cache.`);
+		return Promise.resolve(this.memo[fullUrl]);
+	}
+
+	// Add queue runner interval
+	if (!this.queueRunnerInt) {
+		// Queue runner, bound to `this`, can run at a maximum of 200/minute
+		this.queueRunnerInt = setInterval(queueRunner.bind(this), 333);
+	}
+	// Make event loop not exit while there's stuff in queue
+	this.queueRunnerInt.ref();
+
+	// Push to queue, pass promise resolvers
+	log.verbose(`Adding ${fullUrl} to request queue.`)
+	return new Promise((resolve, reject) => {
+		this.queue.push({
+			fullUrl,
+			memoize,
+			resolve,
+			reject,
+		});
+	});
 };
 
 // Helper functions wrapping around (memoized by default)
 get.eventIds = async function<T = object> (
 	this: GetType<T>,
-	filter: string,
+	calendar: CalendarType,
 	memoize: boolean = true
 ): Promise<EventIdsType> {
-	return (<any>
-		await this(`/accounts/${this.accountId}/events/?idsOnly=true${filter ? `&$filter=${filter}` : ""}`, memoize)
+	const params: ParamsType = {idsOnly: true};
+
+	const filter: string = generateFilter(calendar.options.filter);
+	if (filter) {
+		params["$filter"] = filter;
+	}
+
+	return (
+		await this(`/accounts/${this.accountId}/events/`, params, memoize) as any
 	)["EventIdentifiers"];
 };
 get.event = async function<T = object> (
@@ -60,19 +145,20 @@ get.event = async function<T = object> (
 	eventId: number,
 	memoize: boolean = true
 ): Promise<EventType> {
-	return <any>this(`/accounts/${this.accountId}/events/${eventId}`, memoize);
+	return this(`/accounts/${this.accountId}/events/${eventId}`, undefined, memoize) as any;
 };
 
 
 export default async function<T = object> (
-	client: oauth2.ModuleOptions["client"],
-	user: oauth2.PasswordTokenConfig
+	client: ClientType,
+	user: UserType
 ): Promise<GetType<T>> {
 	return new Proxy(
 		Object.assign(
 			() => {},
 			{
 				memo: {},
+				queue: [],
 				// Authenticate with WA
 				accessToken: await getToken(client, user),
 			}
