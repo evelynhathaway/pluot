@@ -1,6 +1,7 @@
 import request from "request-promise-native";
 import {getToken, refreshToken} from "./token";
 import generateFilter from "./filter";
+import generateMax from "./max";
 import {log} from "./log";
 import {GetType, ParamsType, QueueItem, CalendarType, EventType, EventIdsType, ClientType, UserType} from "./types";
 
@@ -130,6 +131,8 @@ get.eventIds = async function<T = object> (
 	memoize: boolean = true
 ): Promise<EventIdsType> {
 	const params: ParamsType = {idsOnly: true};
+
+	generateMax(calendar.options.filter)
 
 	const filter: string = generateFilter(calendar.options.filter);
 	if (filter) {

@@ -5,7 +5,6 @@
   "keywords": [
     "cli",
     "ical",
-    "nodejs",
     "rss",
     "wild-apricot"
   ],
@@ -34,7 +33,7 @@
   },
   "dependencies": {
     "deepmerge": "^3.0.0",
-    "ical-generator": "^1.4.1",
+    "ical-generator": "^1.4.2",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.5",
     "sanitize-html": "^1.19.3",
@@ -48,13 +47,13 @@
     "@types/sanitize-html": "^1.18.2",
     "@types/simple-oauth2": "^2.2.1",
     "chai": "^4.2.0",
-    "eslint": "^5.9.0",
+    "eslint": "^5.10.0",
     "eslint-plugin-mocha": "^5.2.0",
     "eslint-plugin-node": "^8.0.0",
     "eslint-plugin-typescript": "^0.14.0",
     "mocha": "^5.2.0",
     "ts-essentials": "^1.0.0",
-    "typescript": "^3.2.1",
+    "typescript": "^3.2.2",
     "typescript-eslint-parser": "^21.0.2"
   },
   "engines": {

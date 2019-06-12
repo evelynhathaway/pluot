@@ -1,4 +1,4 @@
-import {DeepPartial, CalendarType, OptionsType, SanitizeOptionsType} from "./types";
+import {CalendarType, OptionsType, SanitizeOptionsType} from "./types";
 
 
 // Sanitization options
@@ -17,8 +17,9 @@ export const defaultSanitizeOptions: SanitizeOptionsType = {
 	transformTags: {
 		"blockquote": "em",
 		"img": (tagName, attribs) => {
+			// TODO: remove empty `alt` and `title`
 			// Transform styled img-based dividers to horizontal rules
-			if (attribs.class.match("WaContentDivider")) {
+			if (attribs.class && attribs.class.match("WaContentDivider")) {
 				return {tagName: "hr", attribs: {}};
 			} else {
 				return {tagName, attribs};
@@ -26,7 +27,7 @@ export const defaultSanitizeOptions: SanitizeOptionsType = {
 		}
 	},
 	allowedSchemes: ["http", "https", "mailto"],
-	nonTextTags: ["style", "script", "textarea", "noscript", "table", "td", "tr", "th", "tbody", "strike"],
+	nonTextTags: ["style", "script", "textarea", "noscript", "table", "td", "tr", "th", "tbody"],
 };
 // Sanitization options for transforming to plaintext
 export const plaintextSanitizeOptions: SanitizeOptionsType = {
