@@ -2,7 +2,7 @@ import {Partial, FilterType, HasToStringType} from "./types";
 
 
 // Convert native date objects to YYYY-MM-DD
-const toISODate = (date: Date): string => date.toISOString().replace(/T.*$/i, "");
+const toISODate = (date: Date): string => date.toISOString().replace(/t.*$/i, "");
 
 // Helpers
 export const eqHelper = function (key: string, value: string | HasToStringType): string {
@@ -53,4 +53,4 @@ export default function (filter: Partial<FilterType>): string {
 
 	// Return as string with `AND` logical operator
 	return result.join(" AND ");
-};
+}

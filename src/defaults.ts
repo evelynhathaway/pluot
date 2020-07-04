@@ -23,7 +23,7 @@ export const defaultSanitizeOptions: SanitizeOptionsType = {
 			} else {
 				return {tagName, attribs};
 			}
-		}
+		},
 	},
 	allowedSchemes: ["http", "https", "mailto"],
 	nonTextTags: ["style", "script", "textarea", "noscript", "table", "td", "tr", "th", "tbody", "strike"],

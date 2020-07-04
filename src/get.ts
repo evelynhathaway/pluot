@@ -1,7 +1,7 @@
 import request from "request-promise-native";
-import {getToken, refreshToken} from "./token";
 import generateFilter from "./filter";
 import {log} from "./log";
+import {getToken, refreshToken} from "./token";
 import {GetType, ParamsType, QueueItem, CalendarType, EventType, EventIdsType, ClientType, UserType} from "./types";
 
 
@@ -44,11 +44,11 @@ const queueRunner = async function<T = object> (
 		result = JSON.parse(
 			await request.get(
 				`https://api.wildapricot.org/publicview/v1${fullUrl}`,
-				{"auth": {"bearer": this.accessToken.token["access_token"]}},
+				{"auth": {"bearer": this.accessToken.token.access_token}},
 			)
 		);
 	} catch (error) {
-		let errorMsg: string = "Failed to fetch from API: ";
+		let errorMsg = "Failed to fetch from API: ";
 
 		if (error.name === "StatusCodeError") {
 			switch (error.statusCode) {
@@ -93,7 +93,7 @@ const get = function<T = object> (
 	this: GetType<T>,
 	endpoint: string,
 	params?: ParamsType,
-	memoize: boolean = false
+	memoize = false
 ): Promise<T> {
 	const fullUrl: string = makeFullUrl(endpoint, params);
 
@@ -112,7 +112,7 @@ const get = function<T = object> (
 	this.queueRunnerInt.ref();
 
 	// Push to queue, pass promise resolvers
-	log.verbose(`Adding ${fullUrl} to request queue.`)
+	log.verbose(`Adding ${fullUrl} to request queue.`);
 	return new Promise((resolve, reject) => {
 		this.queue.push({
 			fullUrl,
@@ -127,23 +127,23 @@ const get = function<T = object> (
 get.eventIds = async function<T = object> (
 	this: GetType<T>,
 	calendar: CalendarType,
-	memoize: boolean = true
+	memoize = true
 ): Promise<EventIdsType> {
 	const params: ParamsType = {idsOnly: true};
 
 	const filter: string = generateFilter(calendar.options.filter);
 	if (filter) {
-		params["$filter"] = filter;
+		params.$filter = filter;
 	}
 
 	return (
 		await this(`/accounts/${this.accountId}/events/`, params, memoize) as any
-	)["EventIdentifiers"];
+	).EventIdentifiers;
 };
 get.event = async function<T = object> (
 	this: GetType<T>,
 	eventId: number,
-	memoize: boolean = true
+	memoize = true
 ): Promise<EventType> {
 	return this(`/accounts/${this.accountId}/events/${eventId}`, undefined, memoize) as any;
 };
@@ -164,10 +164,10 @@ export default async function<T = object> (
 			}
 		),
 		{
-			apply(target: any, thisArg: any, argumentsList: Array<any>) {
+			apply (target: any, thisArg: any, argumentsList: Array<any>) {
 				return get.apply(target, argumentsList);
 			},
-			get(target: any, property: string | number | symbol, receiver: any) {
+			get (target: any, property: string | number | symbol, receiver: any) {
 				if (property === "accountId") {
 					// Dynamic shortcut for the ID of authenticated user to view events as
 					return target.accessToken.token.Permissions[0].AccountId;
@@ -179,7 +179,7 @@ export default async function<T = object> (
 					return Reflect.get(get, property, receiver);
 				}
 			},
-			set(target: any, property: string | number | symbol, value: any, receiver: any) {
+			set (target: any, property: string | number | symbol, value: any, receiver: any) {
 				if (property === "accessToken") {
 					return Reflect.set(target, property, value, receiver);
 				}
@@ -187,4 +187,4 @@ export default async function<T = object> (
 			},
 		}
 	);
-};
+}

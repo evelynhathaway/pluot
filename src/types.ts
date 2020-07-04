@@ -1,6 +1,6 @@
 import icalGen from "ical-generator";
-import oauth2 from "simple-oauth2";
 import sanitizeHtml from "sanitize-html";
+import oauth2 from "simple-oauth2";
 import essentials from "ts-essentials";
 
 
@@ -13,14 +13,14 @@ export interface HasToStringType {
 	toString: {
 		(): string,
 	},
-};
+}
 export type StringIshType = string | HasToStringType;
 
 // Calendar
 export interface CalendarType extends icalGen.CalendarData {
 	description?: string,
 	options: OptionsType,
-};
+}
 export type ICalResponseType = icalGen.ICalCalendar;
 
 // Filter
@@ -34,18 +34,18 @@ export interface FilterType {
 	before: Date | string,
 	// Manual connections to the filter param
 	manual: string,
-};
+}
 
 // Max
 export interface SingleMaxType {
 	amount?: number | false,
 	days?: number | false,
-};
+}
 export interface MaxType {
 	amount?: number | false,
 	past?: SingleMaxType,
 	upcoming?: SingleMaxType,
-};
+}
 
 // Options
 export interface OptionsType {
@@ -66,7 +66,7 @@ export interface OptionsType {
 	save: {
 		path: string,
 	} | false,
-};
+}
 
 // Get function
 export type ParamsType = {
@@ -77,7 +77,7 @@ export interface QueueItem {
 	memoize: boolean,
 	resolve: Function,
 	reject: Function,
-};
+}
 export interface GetType<T = object> {
 	(endpoint: string, params?: ParamsType, memoize?: boolean): Promise<T>,
 	memo: {
@@ -93,7 +93,7 @@ export interface GetType<T = object> {
 	event: {
 		(eventId: number, memoize?: boolean): Promise<EventType>,
 	},
-};
+}
 
 // API responses
 export type EventIdsType = Array<number>;
@@ -117,7 +117,7 @@ export interface EventType {
 	},
 	EventType: string,
 	Name: string,
-};
+}
 
 // Oauth type aliases
 export type ClientType = oauth2.ModuleOptions["client"];

@@ -1,8 +1,8 @@
 import deepmerge from "deepmerge";
-import {emitter, log} from "./log";
 import generateCalendar from "./calendar";
-import makeGet from "./get";
 import {defaultCalendar} from "./defaults";
+import makeGet from "./get";
+import {emitter, log} from "./log";
 import {DeepPartial, CalendarType, OptionsType, GetType, ClientType, UserType, ICalResponseType} from "./types";
 
 
@@ -39,4 +39,4 @@ export default async function (
 
 	log("Finished.");
 	return result;
-};
+}
