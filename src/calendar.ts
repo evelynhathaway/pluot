@@ -1,8 +1,8 @@
-import icalGen from "ical-generator";
 import {promisify} from "util";
-import {log} from "./log";
-import {sanitize} from "./description";
+import icalGen from "ical-generator";
 import {plaintextSanitizeOptions} from "./defaults";
+import {sanitize} from "./description";
+import {log} from "./log";
 import {CalendarType, GetType, EventType, EventIdsType, ICalResponseType} from "./types";
 
 
@@ -15,7 +15,7 @@ export default async function (
 	const eventIds: EventIdsType = await get.eventIds(calendar);
 
 	log(`Fetching ${eventIds.length} events for ${calendar.name}`);
-	for (let eventId of eventIds) {
+	for (const eventId of eventIds) {
 		const event: EventType = await get.event(eventId);
 
 		// Remove newlines and any following spaces from description
@@ -46,7 +46,7 @@ export default async function (
 		});
 	}
 
-	console.log(calendar.options.save)
+	console.log(calendar.options.save);
 
 	if (calendar.options.save) {
 		// Create a promise for saving to file, bound to the ical
